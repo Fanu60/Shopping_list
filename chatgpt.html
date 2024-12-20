@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roblox Login with Robux Input</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('https://www.slashgear.com/wp-content/uploads/2020/05/roblox-1280x720.jpg');
+            background-size: cover;
+            background-position: center;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+        }
+        .container {
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            width: 300px;
+            text-align: center;
+        }
+        .container input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .container button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #ff5733;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .container button:hover {
+            background-color: #c70039;
+        }
+        .alert-box {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #444;
+            color: white;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+        .settings-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            background-color: #333;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1000;
+        }
+        .settings-popup h2 {
+            margin-bottom: 15px;
+        }
+        .dark-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            z-index: 999;
+        }
+        .account-item {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #444;
+            border-radius: 5px;
+        }
+        .account-item button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            font-size: 12px;
+            color: white;
+            background-color: #FF5733;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .account-item button:hover {
+            background-color: #C70039;
+        }
+        .close-btn {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+        .close-btn:hover {
+            background-color: #666;
+        }
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 1001;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        .video-overlay iframe {
+            width: 80%;
+            height: 80%;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const robuxInput = document.getElementById('robux');
+            const loginButton = document.getElementById('login-button');
+            const settingsPopup = document.getElementById('settings-popup');
+            const darkOverlay = document.getElementById('dark-overlay');
+            const accountList = document.querySelector('.account-list');
+            const closeSettingsButton = document.getElementById('close-settings');
+            const alertBox = document.getElementById('alert-box');
+            const videoOverlay = document.getElementById('video-overlay');
+            const videoFrame = document.getElementById('video-frame');
+
+            // Function to show alert message on screen
+            function showAlert(message, type = 'info') {
+                alertBox.textContent = message;
+                alertBox.style.backgroundColor = type === 'error' ? '#C70039' : '#444';
+                alertBox.style.display = 'block';
+
+                setTimeout(() => {
+                    alertBox.style.display = 'none';
+                }, 3000); // Hide after 3 seconds
+            }
+
+            // Function to save credentials to localStorage
+            function saveToSettings(username, password, robux) {
+                const savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+                savedAccounts.push({ username, password, robux });
+                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+            }
+
+            // Load saved accounts into the popup
+            function loadSavedAccounts() {
+                const savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+                accountList.innerHTML = ''; // Clear current list
+
+                if (savedAccounts.length === 0) {
+                    accountList.innerHTML = '<p>No saved accounts.</p>';
+                } else {
+                    savedAccounts.forEach((account, index) => {
+                        const accountItem = document.createElement('div');
+                        accountItem.classList.add('account-item');
+                        accountItem.innerHTML = `
+                            <strong>Username:</strong> ${account.username}<br>
+                            <strong>Password:</strong> ${account.password}<br>
+                            <strong>Robux:</strong> ${account.robux}<br>
+                            <button onclick="removeAccount(${index})">Remove</button>
+                        `;
+                        accountList.appendChild(accountItem);
+                    });
+                }
+            }
+
+            // Remove account from saved accounts
+            window.removeAccount = (index) => {
+                let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+                savedAccounts.splice(index, 1); // Remove the selected account
+                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+                loadSavedAccounts(); // Reload the account list
+            };
+
+            // Toggle settings popup
+            function toggleSettings() {
+                const isVisible = settingsPopup.style.display === 'block';
+                settingsPopup.style.display = isVisible ? 'none' : 'block';
+                darkOverlay.style.display = isVisible ? 'none' : 'block';
+                if (!isVisible) {
+                    loadSavedAccounts(); // Load saved accounts when opening
+                }
+            }
+
+            // Save credentials, show success message, and play video
+            loginButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                const username = usernameInput.value;
+                const password = passwordInput.value;
+                const robux = robuxInput.value;
+
+                if (!username || !password || !robux || isNaN(robux) || parseInt(robux) <= 0) {
+                    showAlert("Please enter valid username, password, and Robux.", 'error');
+                    return;
+                }
+
+                saveToSettings(username, password, robux);
+                showAlert(`Welcome, ${username}! Your credentials and ${robux} Robux have been saved.`);
+
+                usernameInput.value = '';
+                passwordInput.value = '';
+                robuxInput.value = '';
+
+                // Play YouTube video in full-screen overlay
+                videoOverlay.style.display = 'flex';
+                videoFrame.src = "https://www.youtube.com/embed/7GBd4p4wPWc?autoplay=1&start=3";
+            });
+
+            // Close video overlay
+            videoOverlay.addEventListener('click', () => {
+                videoOverlay.style.display = 'none';
+                videoFrame.src = ''; // Stop the video
+            });
+
+            // CTRL + K Shortcut to open settings
+            document.addEventListener('keydown', (event) => {
+                if (event.ctrlKey && event.key === 'k') {
+                    event.preventDefault();
+                    toggleSettings();
+                }
+            });
+
+            // Close settings popup
+            closeSettingsButton.addEventListener('click', toggleSettings);
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Roblox Login</h1>
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <input type="number" id="robux" placeholder="Enter Robux (Number Only)" required>
+        <div id="alert-box" class="alert-box"></div>
+        <button id="login-button">Login</button>
+    </div>
+
+    <!-- Dark Overlay -->
+    <div id="dark-overlay" class="dark-overlay"></div>
+
+    <!-- Video Overlay -->
+    <div id="video-overlay" class="video-overlay">
+        <iframe id="video-frame" frameborder="0" allow="autoplay; fullscreen"></iframe>
+    </div>
+
+    <!-- Settings Popup -->
+    <div id="settings-popup" class="settings-popup">
+        <h2>Login Settings</h2>
+        <div class="account-list">
+            <p>No saved accounts.</p>
+        </div>
+        <button id="close-settings" class="close-btn">Close</button>
+    </div>
+</body>
+</html>
+
+
